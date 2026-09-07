@@ -132,13 +132,15 @@ LoRA rank 8 and VoRA with $r_l=r_q=4$ both use 294,912 trainable parameters.
 
 ### Datasets
 
-| Task | Dataset | CLI name |
-|---|---|---|
-| Deraining | Rain100H | `rain100h` |
-| Desnowing | CSD | `csd` |
-| Denoising | SIDD | `sidd` |
-| Deblurring | GoPro | `gopro` |
-| Dehazing | RESIDE-6K | `reside6k` |
+| Task       | Dataset   | CLI name       | Link |
+| ---------- | --------- | -------------- | ---- |
+| Deraining  | Rain100H  | `rain100h`     | [Download](https://github.com/nnUyi/DerainZoo/blob/master/DerainDatasets.md) |
+| Desnowing  | CSD       | `csd`          | [Download](https://github.com/weitingchen83/ICCV2021-Single-Image-Desnowing-HDCWNet) |
+| Denoising  | SIDD      | `sidd`         | [Download](https://abdokamel.github.io/sidd/) |
+| Deblurring | GoPro     | `gopro`        | [Download](https://seungjunnah.github.io/Datasets/gopro.html) |
+| Dehazing   | RESIDE-6K | `reside6k`     | [Download](https://www.kaggle.com/datasets/kmljts/reside-6k) |
+
+Dataset files are not included in this repository. Please download each dataset from the corresponding link above and organize it according to the directory structure described in [Prepare data](#3-prepare-data).
 
 ### Backbones
 
