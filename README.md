@@ -1,3 +1,4 @@
+<img width="6279" height="2019" alt="figure1" src="https://github.com/user-attachments/assets/659cf325-e124-4203-8cfa-e4a078faed29" />
 # VoRA: Volterra Low-Rank Adaptation Using Nonlinear Interactions for Image Restoration
 
 <p align="center">
@@ -31,7 +32,7 @@ The repository supports deraining, desnowing, denoising, deblurring, dehazing, a
 
 ## Architecture
 
-<img width="1450" height="430" alt="VoRA overview" src="https://github.com/user-attachments/assets/ff94f1dd-2205-4445-9d44-119a0f12ee05" />
+<img width="6279" height="2019" alt="figure1" src="https://github.com/user-attachments/assets/986d1b7c-01be-45d1-80fb-750c546dbb73" />
 
 **LoRA and VoRA.** LoRA adds a linear low-rank residual branch to a frozen pretrained projection. VoRA retains this linear branch and adds a quadratic branch that projects the input into a low-rank latent space, constructs element-wise quadratic features, and projects them back to the output space.
 
