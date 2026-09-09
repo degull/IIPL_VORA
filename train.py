@@ -32,6 +32,10 @@ METHOD_CHOICES = (
     "vora_full",
     "volterra_only",
     "lora_linear_volterra",
+    "loran",
+    "aurora",
+    "neat",
+    "structured_nonlinear_lora",
 )
 BACKBONE_CHOICES = (
     "swinir_lite",
@@ -50,10 +54,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-root", default=r"E:\restormer+volterra\data")
     parser.add_argument("--method", default="vora_v1", choices=METHOD_CHOICES)
     parser.add_argument("--backbone", default="swinir_lite", choices=BACKBONE_CHOICES)
-    parser.add_argument("--swinir-size", default="tiny", choices=("tiny", "small", "base"))
+    parser.add_argument("--swinir-size", default="tiny", choices=("tiny", "small", "base", "color_dn"))
     parser.add_argument("--backbone-size", default="", choices=("", "tiny", "base"))
     parser.add_argument("--target", default="all", choices=("attn", "mlp", "all"))
     parser.add_argument("--rank", type=int, default=4)
+    parser.add_argument("--source-dataset", default="", help="Source dataset used to train the frozen base model.")
+    parser.add_argument("--base-checkpoint", default="", help="Load these base-model weights before inserting adapters.")
     parser.add_argument("--added-degradation", default="none", choices=COMPOSITE_CHOICES)
     parser.add_argument("--degradation-intensity", type=float, default=-1.0)
     parser.add_argument("--crop-size", type=int, default=64)
@@ -120,9 +126,29 @@ def build_restoration_model(args: argparse.Namespace) -> tuple[nn.Module, int]:
         raise ValueError(f"Unsupported backbone: {args.backbone}")
     replaced = 0
 
+    base_checkpoint = getattr(args, "base_checkpoint", "")
+    if base_checkpoint:
+        missing, unexpected = load_model_weights(Path(base_checkpoint), model, args.device)
+        print(f"Loaded base checkpoint: {base_checkpoint}")
+        if missing:
+            print(f"Base checkpoint missing keys: {len(missing)}")
+        if unexpected:
+            print(f"Base checkpoint unexpected keys: {len(unexpected)}")
+
     if args.method == "frozen":
         freeze_module(model)
-    elif args.method in {"lora", "vora_v1", "vora_token", "vora_full", "volterra_only", "lora_linear_volterra"}:
+    elif args.method in {
+        "lora",
+        "vora_v1",
+        "vora_token",
+        "vora_full",
+        "volterra_only",
+        "lora_linear_volterra",
+        "loran",
+        "aurora",
+        "neat",
+        "structured_nonlinear_lora",
+    }:
         freeze_module(model)
         stats = replace_linear_adapters(
             model,
@@ -137,6 +163,35 @@ def build_restoration_model(args: argparse.Namespace) -> tuple[nn.Module, int]:
         raise ValueError(f"Unsupported method: {args.method}")
 
     return model, replaced
+
+
+def _checkpoint_state_dict(checkpoint: object) -> dict[str, torch.Tensor]:
+    if isinstance(checkpoint, dict):
+        for key in ("model", "state_dict", "params"):
+            value = checkpoint.get(key)
+            if isinstance(value, dict):
+                return value
+        if all(isinstance(key, str) for key in checkpoint):
+            return checkpoint  # type: ignore[return-value]
+    raise ValueError("Checkpoint does not contain a model state dict.")
+
+
+def _strip_known_prefixes(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    stripped = {}
+    for key, value in state_dict.items():
+        new_key = key
+        for prefix in ("module.", "model."):
+            if new_key.startswith(prefix):
+                new_key = new_key[len(prefix) :]
+        stripped[new_key] = value
+    return stripped
+
+
+def load_model_weights(path: Path, model: nn.Module, device: str) -> tuple[list[str], list[str]]:
+    checkpoint = torch.load(path, map_location=device)
+    state_dict = _strip_known_prefixes(_checkpoint_state_dict(checkpoint))
+    incompatible = model.load_state_dict(state_dict, strict=False)
+    return list(incompatible.missing_keys), list(incompatible.unexpected_keys)
 
 
 def evaluate(model: nn.Module, loader: DataLoader, device: str) -> tuple[float, float]:
@@ -158,6 +213,8 @@ def append_result(args: argparse.Namespace, row: dict[str, str | int | float]) -
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
         "dataset",
+        "source_dataset",
+        "base_checkpoint",
         "backbone",
         "swinir_size",
         "method",
@@ -177,11 +234,17 @@ def append_result(args: argparse.Namespace, row: dict[str, str | int | float]) -
         "latest_checkpoint",
     ]
     write_header = not csv_path.exists()
+    if csv_path.exists():
+        with csv_path.open("r", newline="") as handle:
+            reader = csv.reader(handle)
+            existing_header = next(reader, None)
+        if existing_header:
+            fieldnames = existing_header
     with csv_path.open("a", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         if write_header:
             writer.writeheader()
-        writer.writerow(row)
+        writer.writerow({field: row.get(field, "") for field in fieldnames})
 
 
 def print_result_table(row: dict[str, str | int | float]) -> None:
@@ -203,6 +266,12 @@ def checkpoint_prefix(args: argparse.Namespace) -> Path:
         f"{args.backbone}_{args.swinir_size}_{args.dataset}_"
         f"{args.method}_{args.target}_r{args.rank}{degradation_suffix}"
     )
+    source_dataset = getattr(args, "source_dataset", "")
+    if source_dataset:
+        name = (
+            f"{args.backbone}_{args.swinir_size}_{source_dataset}_to_{args.dataset}_"
+            f"{args.method}_{args.target}_r{args.rank}{degradation_suffix}"
+        )
     return Path(args.checkpoint_dir) / name
 
 
@@ -291,6 +360,8 @@ def main() -> None:
     best_checkpoint = ckpt_base.with_name(ckpt_base.name + "_best.pth")
 
     print(f"Dataset: {args.dataset}")
+    if args.source_dataset:
+        print(f"Source dataset: {args.source_dataset}")
     print(f"Backbone: {args.backbone}")
     print(f"Method: {args.method}")
     print(f"Target: {args.target}")
@@ -309,6 +380,8 @@ def main() -> None:
         gpu_mem = torch.cuda.max_memory_allocated() / (1024**2) if args.device.startswith("cuda") else 0.0
         row = {
             "dataset": args.dataset,
+            "source_dataset": args.source_dataset,
+            "base_checkpoint": args.base_checkpoint,
             "backbone": args.backbone,
             "swinir_size": args.swinir_size,
             "method": args.method,
@@ -350,6 +423,8 @@ def main() -> None:
         gpu_mem = torch.cuda.max_memory_allocated() / (1024**2) if args.device.startswith("cuda") else 0.0
         row = {
             "dataset": args.dataset,
+            "source_dataset": args.source_dataset,
+            "base_checkpoint": args.base_checkpoint,
             "backbone": args.backbone,
             "swinir_size": args.swinir_size,
             "method": args.method,
@@ -408,6 +483,8 @@ def main() -> None:
     gpu_mem = torch.cuda.max_memory_allocated() / (1024**2) if args.device.startswith("cuda") else 0.0
     row = {
         "dataset": args.dataset,
+        "source_dataset": args.source_dataset,
+        "base_checkpoint": args.base_checkpoint,
         "backbone": args.backbone,
         "swinir_size": args.swinir_size,
         "method": args.method,

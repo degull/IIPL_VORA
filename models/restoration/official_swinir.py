@@ -37,18 +37,29 @@ def build_official_swinir(size: str = "tiny", img_size: int = 64) -> nn.Module:
         "tiny": dict(embed_dim=48, depths=[2, 2], num_heads=[3, 3], window_size=8, mlp_ratio=2.0),
         "small": dict(embed_dim=60, depths=[4, 4, 4, 4], num_heads=[4, 4, 4, 4], window_size=8, mlp_ratio=2.0),
         "base": dict(embed_dim=96, depths=[6, 6, 6, 6], num_heads=[6, 6, 6, 6], window_size=8, mlp_ratio=4.0),
+        "color_dn": dict(
+            embed_dim=180,
+            depths=[6, 6, 6, 6, 6, 6],
+            num_heads=[6, 6, 6, 6, 6, 6],
+            window_size=8,
+            mlp_ratio=2.0,
+            img_size=128,
+        ),
     }
     if size not in configs:
         choices = ", ".join(sorted(configs))
         raise ValueError(f"Unknown SwinIR size '{size}'. Available: {choices}.")
 
+    config = configs[size].copy()
+    resolved_img_size = config.pop("img_size", img_size)
+
     return SwinIR(
-        img_size=img_size,
+        img_size=resolved_img_size,
         patch_size=1,
         in_chans=3,
         upscale=1,
         img_range=1.0,
         upsampler="",
         resi_connection="1conv",
-        **configs[size],
+        **config,
     )

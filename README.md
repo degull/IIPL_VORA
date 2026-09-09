@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VoRA: Volterra Low-Rank Adaptation Using Nonlinear Interactions for Image Restoration
 
 <p align="center">
@@ -167,11 +168,40 @@ pip install -r requirements.txt
 ```
 
 ### 2. Adapter sanity check
+=======
+# VoRA: Volterra Low-Rank Adaptation
+
+VoRA is a PyTorch research implementation of parameter-efficient fine-tuning
+that augments LoRA with a low-rank quadratic Volterra branch. The repository
+includes reusable adapter layers and image-restoration training utilities.
+
+```text
+LoRA:  y = W₀x + BₗAₗx
+VoRA:  y = W₀x + BₗAₗx + Bᵥ(Aᵥx ⊙ Aᵥx)
+```
+
+## Install
+
+```bash
+git clone https://github.com/degull/VORA.git
+cd VORA
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## Quick start
+
+Verify the adapter layers without downloading data or weights:
+>>>>>>> d5bf4c6 (Clean project structure and document VoRA usage)
 
 ```bash
 python test.py
 ```
 
+<<<<<<< HEAD
 This checks output shapes, branch outputs, and trainable parameter counts for the LoRA and VoRA linear adapters.
 
 ### 3. Prepare data
@@ -284,3 +314,36 @@ VoRA는 SwinIR 복원 Transformer 블록의 fused QKV projection, attention outp
 - Rain+Haze, Rain+Blur, Blur+Noise, Haze+Noise 복합 열화 복원
 
 설치와 실행 명령, 데이터 폴더 구조, 정량 결과는 위의 [Quick Start](#quick-start)와 [Results](#results)에서 확인할 수 있습니다.
+=======
+Run a small restoration training job after preparing paired data:
+
+```bash
+python train.py --data-root /path/to/data --dataset rain100h --method vora_v1 --backbone swinir_lite --steps 10
+```
+
+See [dataset setup](docs/DATASETS.md) and the [experiment guide](docs/EXPERIMENTS.md)
+for layouts, checkpoints, and paper-reproduction workflows.
+
+## Repository layout
+
+```text
+models/       Adapter layers and restoration backbones
+datasets/     Paired restoration dataset loaders
+engine/       Training and evaluation helpers
+utils/        Adapter replacement and shared utilities
+scripts/      Optional benchmark, preprocessing, and figure utilities
+experiments/  Paper-reproduction manifests and notes
+docs/         User-facing setup and experiment documentation
+external/     Local-only third-party repositories (not versioned)
+outputs/      Generated logs and figures (not versioned)
+checkpoints/  Downloaded and trained weights (not versioned)
+```
+
+## Core modules
+
+- `models/lora_linear.py` — LoRA baseline.
+- `models/vora_linear.py` — VoRA linear adapter.
+- `models/vora_conv.py` — VoRA 1×1 convolution adapter.
+- `models/volterra.py` — reusable Volterra branches.
+- `utils/adapter_utils.py` — replace compatible backbone layers with adapters.
+>>>>>>> d5bf4c6 (Clean project structure and document VoRA usage)

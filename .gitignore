@@ -16,6 +16,11 @@ env/
 Thumbs.db
 ~$*
 
+.codex/
+.agents/
+.codex_pydeps/
+.codex_pydeps_rt/
+.torch_cache/
 # Secrets and machine-local config
 .env
 .env.*
@@ -53,6 +58,7 @@ data/
 raw_data/
 dataset/
 datasets/raw/
+datasets/Synapse*/
 datasets/images/
 datasets/train/
 datasets/val/
@@ -68,3 +74,13 @@ datasets/test/
 external/SwinIR/
 external/**/model_zoo/
 external/**/testsets/
+external/*
+!external/.gitkeep
+!external/README.md
+
+# Research-only and presentation artifacts
+portfolio_build/
+portfolio_review/
+*.pptx
+figure*.png
+vora_*.png

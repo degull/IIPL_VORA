@@ -8,6 +8,8 @@ from models.ablation_conv import LinearVolterraConv2d, VolterraOnlyConv2d
 from models.ablation_linear import LinearVolterraLinear, VolterraOnlyLinear
 from models.lora_conv import LoRAConv2d
 from models.lora_linear import LoRALinear
+from models.nonlinear_lora_conv import AuroRAConv2d, LoRANConv2d, NEATConv2d, StructuredNonlinearLoRAConv2d
+from models.nonlinear_lora_linear import AuroRALinear, LoRANLinear, NEATLinear, StructuredNonlinearLoRALinear
 from models.vora_conv import VoRAConv2d
 from models.vora_full_linear import VoRAFullLinear, VoRATokenLinear
 from models.vora_linear import VoRALinear
@@ -26,14 +28,37 @@ def freeze_module(module: nn.Module) -> None:
 
 def _copy_linear(
     source: nn.Linear,
-    target: LoRALinear | VoRALinear | VoRATokenLinear | VoRAFullLinear | VolterraOnlyLinear | LinearVolterraLinear,
+    target: (
+        LoRALinear
+        | VoRALinear
+        | VoRATokenLinear
+        | VoRAFullLinear
+        | VolterraOnlyLinear
+        | LinearVolterraLinear
+        | LoRANLinear
+        | AuroRALinear
+        | NEATLinear
+        | StructuredNonlinearLoRALinear
+    ),
 ) -> None:
     target.linear.weight.data.copy_(source.weight.data)
     if source.bias is not None and target.linear.bias is not None:
         target.linear.bias.data.copy_(source.bias.data)
 
 
-def _copy_conv1x1(source: nn.Conv2d, target: LoRAConv2d | VoRAConv2d | VolterraOnlyConv2d | LinearVolterraConv2d) -> None:
+def _copy_conv1x1(
+    source: nn.Conv2d,
+    target: (
+        LoRAConv2d
+        | VoRAConv2d
+        | VolterraOnlyConv2d
+        | LinearVolterraConv2d
+        | LoRANConv2d
+        | AuroRAConv2d
+        | NEATConv2d
+        | StructuredNonlinearLoRAConv2d
+    ),
+) -> None:
     target.conv.weight.data.copy_(source.weight.data)
     if source.bias is not None and target.conv.bias is not None:
         target.conv.bias.data.copy_(source.bias.data)
@@ -54,6 +79,19 @@ def replace_linear_adapters(
             if any(keyword in full_name for keyword in target_keywords):
                 if method == "lora":
                     replacement = LoRALinear(child.in_features, child.out_features, rank=rank, bias=child.bias is not None)
+                elif method == "loran":
+                    replacement = LoRANLinear(child.in_features, child.out_features, rank=rank, bias=child.bias is not None)
+                elif method == "aurora":
+                    replacement = AuroRALinear(child.in_features, child.out_features, rank=rank, bias=child.bias is not None)
+                elif method == "neat":
+                    replacement = NEATLinear(child.in_features, child.out_features, rank=rank, bias=child.bias is not None)
+                elif method == "structured_nonlinear_lora":
+                    replacement = StructuredNonlinearLoRALinear(
+                        child.in_features,
+                        child.out_features,
+                        rank=rank,
+                        bias=child.bias is not None,
+                    )
                 elif method == "vora_v1":
                     replacement = VoRALinear(
                         child.in_features,
@@ -107,6 +145,34 @@ def replace_linear_adapters(
             if any(keyword in full_name for keyword in target_keywords):
                 if method == "lora":
                     conv_replacement = LoRAConv2d(
+                        child.in_channels,
+                        child.out_channels,
+                        rank=rank,
+                        bias=child.bias is not None,
+                    )
+                elif method == "loran":
+                    conv_replacement = LoRANConv2d(
+                        child.in_channels,
+                        child.out_channels,
+                        rank=rank,
+                        bias=child.bias is not None,
+                    )
+                elif method == "aurora":
+                    conv_replacement = AuroRAConv2d(
+                        child.in_channels,
+                        child.out_channels,
+                        rank=rank,
+                        bias=child.bias is not None,
+                    )
+                elif method == "neat":
+                    conv_replacement = NEATConv2d(
+                        child.in_channels,
+                        child.out_channels,
+                        rank=rank,
+                        bias=child.bias is not None,
+                    )
+                elif method == "structured_nonlinear_lora":
+                    conv_replacement = StructuredNonlinearLoRAConv2d(
                         child.in_channels,
                         child.out_channels,
                         rank=rank,
