@@ -1,4 +1,3 @@
-<img width="6279" height="2019" alt="figure1" src="https://github.com/user-attachments/assets/659cf325-e124-4203-8cfa-e4a078faed29" />
 # VoRA: Volterra Low-Rank Adaptation Using Nonlinear Interactions for Image Restoration
 
 <p align="center">
